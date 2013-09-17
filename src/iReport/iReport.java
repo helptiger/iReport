@@ -3,6 +3,7 @@ package iReport;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Scanner;
 
@@ -25,12 +26,10 @@ public class iReport extends JavaPlugin {
     @SuppressWarnings("unused")
     public boolean onCommand(CommandSender sender, Command cmd, String label, String args[]) {
         String player = sender.getName();
-        String target = "";
-        try {
-            target = args[0];
-        } catch (ArrayIndexOutOfBoundsException e) {
-        }
+        List<Player> l = new ArrayList<>();
+        l.addAll(Arrays.asList(sender.getServer().getOnlinePlayers()));
         if ((cmd.getName().equalsIgnoreCase("greport")) && (args.length == 1)) {
+            String target = args[0];
             if (!sender.hasPermission("ireport.greport") && !sender.isOp()) {
                 sender.sendMessage(ChatColor.RED + "You don't have permission");
                 return true;
@@ -40,15 +39,16 @@ public class iReport extends JavaPlugin {
             getConfig().set("reports.griefing." + player, Rlocation.getxyz(this, args[0]) + "; " + target);
 
             saveConfig();
-            for (Player p : sender.getServer().getOnlinePlayers()) {
+            l.parallelStream().forEach(p ->{
                 if (p.isOp() || p.hasPermission("iReport.seereport")) {
                     p.sendMessage(ChatColor.RED + player + " has reported " + target + " for griefing");
                 }
-            }
+            });
 
             return true;
         }
         if ((cmd.getName().equalsIgnoreCase("hreport")) && (args.length == 2)) {
+            String target = args[0];
             if (!sender.hasPermission("ireport.hreport")) {
                 sender.sendMessage(ChatColor.RED + "You don't have permission to perform this command");
                 return true;
@@ -58,14 +58,15 @@ public class iReport extends JavaPlugin {
             sender.sendMessage(ChatColor.BLUE + "You successfully reported " + ChatColor.RED + target);
             saveConfig();
 
-            for (Player p : sender.getServer().getOnlinePlayers()) {
+            l.parallelStream().forEach(p ->{
                 if (p.isOp() || p.hasPermission("iReport.seereport")) {
                     p.sendMessage(ChatColor.RED + player + " has reported " + target + " for hacking " + args[1]);
                 }
-            }
+            });
             return true;
         }
         if ((cmd.getName().equalsIgnoreCase("sreport")) && (args.length == 1)) {
+            String target = args[0];
             if (!sender.hasPermission("ireport.sreport")) {
                 sender.sendMessage(ChatColor.RED + "You don't have permission to perform this command");
                 return true;
@@ -75,11 +76,11 @@ public class iReport extends JavaPlugin {
             sender.sendMessage(ChatColor.BLUE + "You don't have permission to perform this command" + ChatColor.RED + target);
             saveConfig();
 
-            for (Player p : sender.getServer().getOnlinePlayers()) {
+            l.parallelStream().forEach(p ->{
                 if (p.isOp() || p.hasPermission("iReport.seereport")) {
                     p.sendMessage(ChatColor.RED + player + " has reported " + target + " for swearing");
                 }
-            }
+            });
             return true;
         }
 
@@ -108,16 +109,7 @@ public class iReport extends JavaPlugin {
            
             return true;
         }
-        if (cmd.getName().equalsIgnoreCase("reports")) {
-            return true;
-        }
         return false;
-    }
-
-    public List<String> name() {
-        List<String> l = new ArrayList<String>();
-        return l;
-
     }
 
     public MYSQL getMYSQL() {
@@ -137,7 +129,7 @@ public class iReport extends JavaPlugin {
 
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        List<String> l = new ArrayList<String>();
+        List<String> l = new ArrayList<>();
         if (sender.isOp()) {
             l.add("hreport");
             l.add("greport");
