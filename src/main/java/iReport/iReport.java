@@ -113,11 +113,11 @@ public class iReport extends JavaPlugin {
     }
 
     public MYSQL getMYSQL() {
-        PluginManager pm = this.getServer().getPluginManager();
+//      PluginManager pm = this.getServer().getPluginManager();
         if (sql == null) {
             try {
                 sql = new MYSQL();
-/*                Reports Reports = new Reports(this);
+/*              Reports Reports = new Reports(this);
                 pm.registerEvents(Reports, this);
                 this.getCommand("greport").setExecutor(Reports);
    */         } catch (Exception e) {
