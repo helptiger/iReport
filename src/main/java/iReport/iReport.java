@@ -16,7 +16,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 public class iReport extends JavaPlugin {
 
-    public static final List<String> REPORTLIST = new ArrayList<String>();
+    public static final List<String> REPORTLIST = new ArrayList<>();
     MYSQL sql;
 
     public iReport() {
@@ -68,12 +68,12 @@ public class iReport extends JavaPlugin {
         if ((cmd.getName().equalsIgnoreCase("sreport")) && (args.length == 1)) {
             String target = args[0];
             if (!sender.hasPermission("ireport.sreport")) {
-                sender.sendMessage(ChatColor.RED + "You don't have permission to perform this command");
+                sender.sendMessage(ChatColor.RED + "You don't have permission to perform this command"s);
                 return true;
             }
             String already = (String) getConfig().get("reports.swearing." + player);
             getConfig().set("reports.swearing." + player, "; " + target);
-            sender.sendMessage(ChatColor.BLUE + "You don't have permission to perform this command" + ChatColor.RED + target);
+            sender.sendMessage(ChatColor.BLUE + "You successfully reported" + ChatColor.RED + target);
             saveConfig();
 
             l.parallelStream().forEach(p ->{
@@ -117,10 +117,10 @@ public class iReport extends JavaPlugin {
         if (sql == null) {
             try {
                 sql = new MYSQL();
-                Reports Reports = new Reports(this);
+/*                Reports Reports = new Reports(this);
                 pm.registerEvents(Reports, this);
                 this.getCommand("greport").setExecutor(Reports);
-            } catch (Exception e) {
+   */         } catch (Exception e) {
                 e.printStackTrace();
             }
         }

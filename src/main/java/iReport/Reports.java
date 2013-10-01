@@ -1,4 +1,4 @@
-package iReport;
+/*package iReport;
 
 
 import java.sql.Connection;
@@ -34,12 +34,12 @@ public class Reports implements CommandExecutor, Listener {
             if (args.length > 0) {
                 String Reason = this.Reported(args[0]);
                 if (Reason == null) {
-                    cs.sendMessage("§6" + args[0] + "§7 is not reported");
+                    cs.sendMessage("ï¿½6" + args[0] + "ï¿½7 is not reported");
                 }else {
-                    cs.sendMessage("§6" + args[0] + "§7 is reported for §6" + Reason + "§7)");
+                    cs.sendMessage("ï¿½6" + args[0] + "ï¿½7 is reported for ï¿½6" + Reason + "ï¿½7)");
                 }
                 }else {
-                    cs.sendMessage("§c/greport [name]");
+                    cs.sendMessage("ï¿½c/greport [name]");
             }
             
             return true;
@@ -61,10 +61,10 @@ public class Reports implements CommandExecutor, Listener {
             
             Player p = Bukkit.getPlayer(player);
             if (p != null) {
-                cs.sendMessage("§6" + player + "Was reported");
+                cs.sendMessage("ï¿½6" + player + "Was reported");
             }
         }else {
-            cs.sendMessage("§c/ gereport [name]");
+            cs.sendMessage("ï¿½c/ gereport [name]");
         
        
         } 
@@ -116,3 +116,4 @@ public class Reports implements CommandExecutor, Listener {
     }
  
 
+*/
