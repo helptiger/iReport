@@ -68,7 +68,7 @@ public class iReport extends JavaPlugin {
         if ((cmd.getName().equalsIgnoreCase("sreport")) && (args.length == 1)) {
             String target = args[0];
             if (!sender.hasPermission("ireport.sreport")) {
-                sender.sendMessage(ChatColor.RED + "You don't have permission to perform this command"s);
+                sender.sendMessage(ChatColor.RED + "You don't have permission to perform this command");
                 return true;
             }
             String already = (String) getConfig().get("reports.swearing." + player);
