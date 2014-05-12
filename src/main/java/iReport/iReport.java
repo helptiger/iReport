@@ -164,10 +164,10 @@ public class iReport extends JavaPlugin {
                 return l;
             }
             if (args[0].toLowerCase().equals("uuid")) {
-                return set.parallelStream().map(u -> u.toString()).filter(s -> s.startsWith(args[0])).collect(Collectors.toList());
+                return set.parallelStream().map(u -> u.toString()).filter(s -> s.startsWith(args[1])).collect(Collectors.toList());
             }
             if (args[0].toLowerCase().equals("usernameo")) {
-                return Data.init().playermapo.values().parallelStream().filter(s -> s.startsWith(args[0])).collect(Collectors.toList());
+                return Data.init().playermapo.values().parallelStream().filter(s -> s.startsWith(args[1])).collect(Collectors.toList());
             }
         }
         return super.onTabComplete(sender, command, alias, args);
