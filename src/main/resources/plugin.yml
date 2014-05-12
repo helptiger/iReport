@@ -1,5 +1,5 @@
 name: iReport
-version: 1.5
+version: 2.0-SNAPSHOT
 main: iReport.iReport
 commands:
   greport:
@@ -8,8 +8,8 @@ commands:
     permission: ireport.greport
     permission-message: You don't have permission!
   hreport:
-    description: Report a hacker
-    usage: /hreport <player>
+    description: Report a hacker + what type of hack used
+    usage: /hreport <player> <type of hack>
     permission: ireport.hreport
     permission-message: You don't have permission!
   sreport:
@@ -20,3 +20,13 @@ commands:
   ireport:
     description: Get plugin help
     usage: /ireport
+  reports:
+    description: get reports list
+    usage: /reports [type] [value]
+    permission: ireport.reports
+    permission-message: You don't have permission!
+  dreport:
+    description: deleat a report
+    usage: /dreport <UUID>
+    permission: ireport.dreport
+    permission-message: You don't have permission!

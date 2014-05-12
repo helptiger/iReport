@@ -1,126 +1,56 @@
 package iReport;
 
+import iReport.commands.Dreport;
+import iReport.commands.HReport;
+import iReport.commands.Reports;
+import iReport.commands.greport;
+import iReport.commands.ireportc;
+import iReport.commands.sreport;
+import iReport.mysql.MYSQL;
+import iReport.util.Data;
+import iReport.util.Utils;
+
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Scanner;
+import java.util.Set;
+import java.util.UUID;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
-import org.bukkit.ChatColor;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
-import org.bukkit.entity.Player;
-import org.bukkit.plugin.PluginManager;
+import org.bukkit.configuration.file.FileConfiguration;
+import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class iReport extends JavaPlugin {
-
-    public static final List<String> REPORTLIST = new ArrayList<>();
-    MYSQL sql;
+    public static final Logger logger = Logger.getLogger("iReport");
+    public MYSQL sql;
+    private File reportsfile;
+    private YamlConfiguration newConfig;
 
     public iReport() {
-    }
-
-    @Override
-    @SuppressWarnings("unused")
-    public boolean onCommand(CommandSender sender, Command cmd, String label, String args[]) {
-        String player = sender.getName();
-        List<Player> l = new ArrayList<>();
-        l.addAll(Arrays.asList(sender.getServer().getOnlinePlayers()));
-        if ((cmd.getName().equalsIgnoreCase("greport")) && (args.length == 1)) {
-            String target = args[0];
-            if (!sender.hasPermission("ireport.greport") && !sender.isOp()) {
-                sender.sendMessage(ChatColor.RED + "You don't have permission");
-                return true;
-            }
-            String already = (String) getConfig().get("reports.griefing." + player);
-            sender.sendMessage(ChatColor.BLUE + "You successfully reported " + ChatColor.RED + target);
-            getConfig().set("reports.griefing." + player, Rlocation.getxyz(this, args[0]) + "; " + target);
-
-            saveConfig();
-            l.parallelStream().forEach(p ->{
-                if (p.isOp() || p.hasPermission("iReport.seereport")) {
-                    p.sendMessage(ChatColor.RED + player + " has reported " + target + " for griefing");
-                }
-            });
-
-            return true;
-        }
-        if ((cmd.getName().equalsIgnoreCase("hreport")) && (args.length == 2)) {
-            String target = args[0];
-            if (!sender.hasPermission("ireport.hreport")) {
-                sender.sendMessage(ChatColor.RED + "You don't have permission to perform this command");
-                return true;
-            }
-            String already = (String) getConfig().get("reports.hacking." + player);
-            getConfig().set("reports.hacking." + player, new StringBuilder("type: ").append(args[1]).toString() + "; " + target);
-            sender.sendMessage(ChatColor.BLUE + "You successfully reported " + ChatColor.RED + target);
-            saveConfig();
-
-            l.parallelStream().forEach(p ->{
-                if (p.isOp() || p.hasPermission("iReport.seereport")) {
-                    p.sendMessage(ChatColor.RED + player + " has reported " + target + " for hacking " + args[1]);
-                }
-            });
-            return true;
-        }
-        if ((cmd.getName().equalsIgnoreCase("sreport")) && (args.length == 1)) {
-            String target = args[0];
-            if (!sender.hasPermission("ireport.sreport")) {
-                sender.sendMessage(ChatColor.RED + "You don't have permission to perform this command");
-                return true;
-            }
-            String already = (String) getConfig().get("reports.swearing." + player);
-            getConfig().set("reports.swearing." + player, "; " + target);
-            sender.sendMessage(ChatColor.BLUE + "You successfully reported" + ChatColor.RED + target);
-            saveConfig();
-
-            l.parallelStream().forEach(p ->{
-                if (p.isOp() || p.hasPermission("iReport.seereport")) {
-                    p.sendMessage(ChatColor.RED + player + " has reported " + target + " for swearing");
-                }
-            });
-            return true;
-        }
-
-        if (cmd.getName().equalsIgnoreCase("ireport")) {
-            sender.sendMessage(ChatColor.YELLOW + "==============================");
-            sender.sendMessage(ChatColor.GREEN + "/greport - Report a griefer");
-            sender.sendMessage(ChatColor.GREEN + "/hreport - Report a hacker");
-            sender.sendMessage(ChatColor.GREEN + "/sreport - Report a swearer");
-            sender.sendMessage(ChatColor.GREEN + "/ireport - Show this help menu");
-            sender.sendMessage(ChatColor.YELLOW + "==============================");
-            sender.sendMessage(ChatColor.MAGIC + "Created by tudse145 & heni123321");
-
-            return true;
-        }
-        if (cmd.getName().equalsIgnoreCase("reports")) {
-            try {
-                Scanner sc = new Scanner(new File("plugins/iReport/", "config.yml"));
-                while (sc.hasNext()) {
-                    sender.sendMessage(sc.nextLine());
-                }
-                sc.close();
-            } catch (FileNotFoundException e) {
-                
-            }
-
-           
-            return true;
-        }
-        return false;
+        this.reportsfile = new File(getDataFolder(), "reports.yml");
     }
 
     public MYSQL getMYSQL() {
-//      PluginManager pm = this.getServer().getPluginManager();
-        if (sql == null) {
+        if (this.sql == null) {
             try {
-                sql = new MYSQL();
-/*              Reports Reports = new Reports(this);
-                pm.registerEvents(Reports, this);
-                this.getCommand("greport").setExecutor(Reports);
-   */         } catch (Exception e) {
+                this.sql = new MYSQL();
+                if (MYSQL.isenable) {
+                    this.sql.queryUpdate("CREATE TABLE IF NOT EXISTS Reports (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(16), Reason VARCHAR (100))");
+                }
+            } catch (Exception e) {
                 e.printStackTrace();
             }
         }
@@ -128,32 +58,118 @@ public class iReport extends JavaPlugin {
     }
 
     @Override
-    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        List<String> l = new ArrayList<>();
-        if (sender.isOp()) {
-            l.add("hreport");
-            l.add("greport");
-            l.add("sreport");
-            l.add("ireport");
-            return l;
+    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+        if (label.equalsIgnoreCase("dreport") && args.length == 1) {
+            return new Dreport().onCommand(sender, command, label, args);
         }
-        if (sender.hasPermission("ireport.hreport")) {
-            l.add("hreport");
+        if (label.equalsIgnoreCase("reports")) {
+            return new Reports(this).onCommand(sender, command, label, args);
         }
-        if (sender.hasPermission("ireport.greport")) {
-            l.add("greport");
-        }
-        if (sender.hasPermission("ireport.sreport")) {
-            l.add("sreport");
-        }
-        l.add("ireport");
-        return l;
+
+        return super.onCommand(sender, command, label, args);
     }
 
     @Override
     public void onEnable() {
-        saveConfig();
-        getConfig().options().copyDefaults(true);
-        // getMYSQL();
+        try {
+            File f = new File("plugins/iReport/", "config.yml");
+            Scanner sc = new Scanner(f);
+            while (sc.hasNext()) {
+                if (sc.nextLine().contains("reports:")) {
+                    sc.close();
+                    if (f.renameTo(new File("plugins/iReport/", "reports.yml"))) {
+                        break;
+                    } else {
+                        try {
+                            throw new IOException("fail to rename file config.yml, iReport will not load");
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                            return;
+                        }
+                    }
+                }
+            }
+            sc.close();
+        } catch (FileNotFoundException e) {
+        }
+        getCommand("greport").setExecutor(new greport(this));
+        getCommand("hreport").setExecutor(new HReport(this));
+        getCommand("sreport").setExecutor(new sreport(this));
+        getCommand("ireport").setExecutor(new ireportc());
+        getServer().getPluginManager().registerEvents(new Utils(), this);
+
+        getMYSQL();
+        try {
+            ObjectInputStream o = new ObjectInputStream(new FileInputStream(new File(getDataFolder(), "data.bin")));
+            Data.instens = (Data) o.readObject();
+            o.close();
+        } catch (FileNotFoundException e) {
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Override
+    public void onDisable() {
+        if (MYSQL.isenable && sql.hasConnection()) {
+            sql.closeConnection();
+        }
+        try {
+            ObjectOutputStream o = new ObjectOutputStream(new FileOutputStream(new File(getDataFolder(), "data.bin")));
+            o.writeObject(Data.init());
+            o.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public FileConfiguration getReports() {
+        if (newConfig == null) {
+            newConfig = YamlConfiguration.loadConfiguration(reportsfile);
+
+            InputStream defConfigStream = getResource("reports.yml");
+            if (defConfigStream != null) {
+                YamlConfiguration defConfig = YamlConfiguration.loadConfiguration(defConfigStream);
+
+                newConfig.setDefaults(defConfig);
+            }
+        }
+        return newConfig;
+    }
+
+    public void saveReports() {
+        try {
+            getReports().save(reportsfile);
+        } catch (IOException ex) {
+            logger.log(Level.SEVERE, "Could not save config to " + reportsfile, ex);
+        }
+    }
+
+    @Override
+    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+        Set<UUID> set = Data.init().playermapo.keySet();
+        if (sender.hasPermission("iReport.dreport") && alias.equalsIgnoreCase("dreport")) {
+            return set.parallelStream().map(u -> u.toString()).filter(s -> s.startsWith(args[0])).collect(Collectors.toList());
+        }
+        if (sender.hasPermission("iReport.reports") && alias.equalsIgnoreCase("reports")) {
+            if (args.length < 2) {
+                List<String> l = new ArrayList<String>();
+                if ("uuid".startsWith(args[0].toLowerCase())) {
+                    l.add("uuid");
+                }
+                if ("usernameo".startsWith(args[0].toLowerCase())) {
+                    l.add("usernameo");
+                }
+                return l;
+            }
+            if (args[0].toLowerCase().equals("uuid")) {
+                return set.parallelStream().map(u -> u.toString()).filter(s -> s.startsWith(args[0])).collect(Collectors.toList());
+            }
+            if (args[0].toLowerCase().equals("usernameo")) {
+                return Data.init().playermapo.values().parallelStream().filter(s -> s.startsWith(args[0])).collect(Collectors.toList());
+            }
+        }
+        return super.onTabComplete(sender, command, alias, args);
     }
 }
