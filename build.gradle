@@ -19,5 +19,5 @@ targetCompatibility = '1.8'
 sourceCompatibility = '1.8'
 
 dependencies {
-    compile 'org.bukkit:bukkit:1.7.9-R0.1-SNAPSHOT'
+    compile 'org.bukkit:craftbukkit:1.7.9-R0.2-SNAPSHOT'
 }

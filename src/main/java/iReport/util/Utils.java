@@ -3,8 +3,8 @@ package iReport.util;
 import iReport.iReport;
 
 import java.util.UUID;
-import java.util.logging.Level;
 
+import org.apache.logging.log4j.Level;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Location;
@@ -40,7 +40,7 @@ public class Utils implements Listener {
             return String.valueOf("x " + loc.getBlockX() + " y " + loc.getBlockY() + " z " + loc.getBlockZ());
         } catch (Exception e) {
             if (sender != null) {
-                iReport.logger.log(Level.WARNING, p + " is not online");
+                iReport.logger.log(Level.WARN, p + " is not online");
                 sender.sendMessage(ChatColor.RED + p + " is not online");
             }
         }
@@ -50,7 +50,12 @@ public class Utils implements Listener {
     }
 
     public static void reportplayer(String target, String reporttype, CommandSender sender, boolean b) {
-        UUID p = Bukkit.getPlayer(target).getUniqueId();
+    	UUID p = null;
+    	try {
+            p = Bukkit.getPlayer(target).getUniqueId();
+		} catch (NullPointerException e) {
+			return;
+		}
         Data data = Data.init();
         data.playermapo.put(p, target);
         Object o = data.playermapor.get(target);

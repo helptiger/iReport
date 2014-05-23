@@ -21,20 +21,22 @@ import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
-import java.util.Set;
 import java.util.UUID;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
+import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class iReport extends JavaPlugin {
-    public static final Logger logger = Logger.getLogger("iReport");
+    public static final Logger logger = LogManager.getLogger();
     public MYSQL sql;
     private File reportsfile;
     private YamlConfiguration newConfig;
@@ -99,13 +101,10 @@ public class iReport extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new Utils(), this);
 
         getMYSQL();
-        try {
-            ObjectInputStream o = new ObjectInputStream(new FileInputStream(new File(getDataFolder(), "data.bin")));
+        try (ObjectInputStream o = new ObjectInputStream(new FileInputStream(new File(getDataFolder(), "data.bin")))){
             Data.instens = (Data) o.readObject();
-            o.close();
-        } catch (FileNotFoundException e) {
-
-        } catch (Exception e) {
+        } catch (FileNotFoundException e){}
+        catch (Exception e) {
             e.printStackTrace();
         }
     }
@@ -115,10 +114,8 @@ public class iReport extends JavaPlugin {
         if (MYSQL.isenable && sql.hasConnection()) {
             sql.closeConnection();
         }
-        try {
-            ObjectOutputStream o = new ObjectOutputStream(new FileOutputStream(new File(getDataFolder(), "data.bin")));
+        try (ObjectOutputStream o = new ObjectOutputStream(new FileOutputStream(new File(getDataFolder(), "data.bin")));) {
             o.writeObject(Data.init());
-            o.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -130,7 +127,8 @@ public class iReport extends JavaPlugin {
 
             InputStream defConfigStream = getResource("reports.yml");
             if (defConfigStream != null) {
-                YamlConfiguration defConfig = YamlConfiguration.loadConfiguration(defConfigStream);
+                @SuppressWarnings("deprecation")
+				YamlConfiguration defConfig = YamlConfiguration.loadConfiguration(defConfigStream);
 
                 newConfig.setDefaults(defConfig);
             }
@@ -142,15 +140,15 @@ public class iReport extends JavaPlugin {
         try {
             getReports().save(reportsfile);
         } catch (IOException ex) {
-            logger.log(Level.SEVERE, "Could not save config to " + reportsfile, ex);
+            logger.log(Level.ERROR, "Could not save config to " + reportsfile, ex);
         }
     }
 
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        Set<UUID> set = Data.init().playermapo.keySet();
+        Stream<String> set = Data.init().playermapo.keySet().parallelStream().map(UUID::toString);
         if (sender.hasPermission("iReport.dreport") && alias.equalsIgnoreCase("dreport")) {
-            return set.parallelStream().map(u -> u.toString()).filter(s -> s.startsWith(args[0])).collect(Collectors.toList());
+            return set.filter(s -> s.startsWith(args[0])).collect(Collectors.toList());
         }
         if (sender.hasPermission("iReport.reports") && alias.equalsIgnoreCase("reports")) {
             if (args.length < 2) {
@@ -164,12 +162,12 @@ public class iReport extends JavaPlugin {
                 return l;
             }
             if (args[0].toLowerCase().equals("uuid")) {
-                return set.parallelStream().map(u -> u.toString()).filter(s -> s.startsWith(args[1])).collect(Collectors.toList());
+                return set.filter(s -> s.startsWith(args[1])).collect(Collectors.toList());
             }
             if (args[0].toLowerCase().equals("usernameo")) {
                 return Data.init().playermapo.values().parallelStream().filter(s -> s.startsWith(args[1])).collect(Collectors.toList());
             }
         }
-        return super.onTabComplete(sender, command, alias, args);
+        return null;
     }
 }
