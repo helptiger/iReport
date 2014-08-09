@@ -22,41 +22,37 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
 import java.util.UUID;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.entity.Player;
 import org.bukkit.plugin.java.JavaPlugin;
 
-public class iReport extends JavaPlugin {
-    public static final Logger logger = LogManager.getLogger();
-    public MYSQL sql;
-    private File reportsfile;
+public class IReport extends JavaPlugin {
+    public static final Logger logger = Logger.getLogger("iReport");
+    public static MYSQL sql;
+    private final File reportsfile;
     private YamlConfiguration newConfig;
 
-    public iReport() {
+    public IReport() {
         this.reportsfile = new File(getDataFolder(), "reports.yml");
     }
 
-    public MYSQL getMYSQL() {
-        if (this.sql == null) {
+    public static MYSQL getMYSQL() {
+        if (sql == null) {
             try {
-                this.sql = new MYSQL();
-                if (MYSQL.isenable) {
-                    this.sql.queryUpdate("CREATE TABLE IF NOT EXISTS Reports (id INT AUTO_INCREMENT PRIMARY KEY, name VARCHAR(16), Reason VARCHAR (100))");
-                }
+                sql = new MYSQL();
+                sql.queryUpdate("CREATE TABLE IF NOT EXISTS reports (uuid VARCHAR(36) PRIMARY KEY, currentname VARCHAR(16), Report LONGTEXT, username VARCHAR(16))");
             } catch (Exception e) {
                 e.printStackTrace();
             }
         }
-        return this.sql;
+        return sql;
     }
 
     @Override
@@ -65,7 +61,7 @@ public class iReport extends JavaPlugin {
             return new Dreport().onCommand(sender, command, label, args);
         }
         if (label.equalsIgnoreCase("reports")) {
-            return new Reports(this).onCommand(sender, command, label, args);
+            return new Reports().onCommand(sender, command, label, args);
         }
 
         return super.onCommand(sender, command, label, args);
@@ -101,17 +97,17 @@ public class iReport extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new Utils(), this);
 
         getMYSQL();
-        try (ObjectInputStream o = new ObjectInputStream(new FileInputStream(new File(getDataFolder(), "data.bin")))){
+        try (ObjectInputStream o = new ObjectInputStream(new FileInputStream(new File(getDataFolder(), "data.bin")))) {
             Data.instens = (Data) o.readObject();
-        } catch (FileNotFoundException e){}
-        catch (Exception e) {
+        } catch (FileNotFoundException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
     @Override
     public void onDisable() {
-        if (MYSQL.isenable && sql.hasConnection()) {
+        if (sql.isenable && sql.hasConnection()) {
             sql.closeConnection();
         }
         try (ObjectOutputStream o = new ObjectOutputStream(new FileOutputStream(new File(getDataFolder(), "data.bin")));) {
@@ -128,7 +124,7 @@ public class iReport extends JavaPlugin {
             InputStream defConfigStream = getResource("reports.yml");
             if (defConfigStream != null) {
                 @SuppressWarnings("deprecation")
-				YamlConfiguration defConfig = YamlConfiguration.loadConfiguration(defConfigStream);
+                YamlConfiguration defConfig = YamlConfiguration.loadConfiguration(defConfigStream);
 
                 newConfig.setDefaults(defConfig);
             }
@@ -140,7 +136,7 @@ public class iReport extends JavaPlugin {
         try {
             getReports().save(reportsfile);
         } catch (IOException ex) {
-            logger.log(Level.ERROR, "Could not save config to " + reportsfile, ex);
+            logger.log(Level.SEVERE, "Could not save config to " + reportsfile, ex);
         }
     }
 

@@ -2,6 +2,7 @@ package iReport.commands;
 
 import java.util.UUID;
 
+import iReport.IReport;
 import iReport.util.Data;
 
 import org.bukkit.ChatColor;
@@ -14,13 +15,18 @@ public class Dreport implements CommandExecutor {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         Data data = Data.init();
-        if (args[0].equals("*") && sender.hasPermission("ireport.dreport.all"))
-        {
-            data.playermap.clear();
-            data.playermapo.clear();
-            data.playermapor.clear();
-            data.playermapr.clear();
-            sender.sendMessage(ChatColor.GREEN+"Successfully cleared reports");
+        if (args[0].equals("*")) {
+            if (sender.hasPermission("ireport.dreport.all")) {
+                data.playermapo.keySet().stream().forEach(uuid -> {
+                    IReport.getMYSQL().queryUpdate("DELETE FROM reports WHERE uuid = '" + uuid.toString() + "'");
+                });
+                data.playermapo.clear();
+                data.playermapor.clear();
+                data.playermapr.clear();
+                sender.sendMessage(ChatColor.GREEN + "Successfully cleared reports");
+            } else {
+                sender.sendMessage(ChatColor.RED + "You don't have permission");
+            }
             return true;
         }
         try {
@@ -28,9 +34,10 @@ public class Dreport implements CommandExecutor {
             data.playermapo.remove(UUID.fromString(args[0]));
             data.playermapr.remove(UUID.fromString(args[0]));
             data.playermapor.remove(s);
-            sender.sendMessage(ChatColor.GREEN+"Successfully deleted "+s);
+            IReport.getMYSQL().queryUpdate("DELETE FROM reports WHERE uuid = '" + UUID.fromString(args[0]) + "'");
+            sender.sendMessage(ChatColor.GREEN + "Successfully deleted " + s);
         } catch (IllegalArgumentException e) {
-            sender.sendMessage(ChatColor.RED+"invalid UUID");
+            sender.sendMessage(ChatColor.RED + "invalid UUID");
         }
         return true;
     }

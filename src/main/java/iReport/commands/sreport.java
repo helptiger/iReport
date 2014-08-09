@@ -1,9 +1,6 @@
 package iReport.commands;
 
-import java.util.stream.Stream;
-
-import iReport.iReport;
-import iReport.mysql.MYSQL;
+import iReport.IReport;
 import iReport.util.Utils;
 
 import org.bukkit.ChatColor;
@@ -13,9 +10,9 @@ import org.bukkit.command.CommandSender;
 
 public class sreport implements CommandExecutor {
 
-    private iReport plugin;
+    private IReport plugin;
 
-    public sreport(iReport plugin) {
+    public sreport(IReport plugin) {
         this.plugin = plugin;
     }
 
@@ -29,13 +26,10 @@ public class sreport implements CommandExecutor {
                 return true;
             }
             plugin.getReports().set("reports.swearing." + player, "; " + target);
-            sender.sendMessage(ChatColor.BLUE + "You successfully reported " + ChatColor.RED + target);
-            if (MYSQL.isenable) {
-                plugin.getMYSQL().queryUpdate("INSERT INTO reports (`name`,`Reason`) values ('" + target + "',' Swearing ')");
-            }
-            plugin.saveReports();
-            Stream.of(sender.getServer().getOnlinePlayers()).parallel().filter(p -> p.isOp() || p.hasPermission("iReport.seereport")).forEach(p -> p.sendMessage(ChatColor.RED + player + " has reported " + target + " for swearing"));
             Utils.reportplayer(target, "sReport ", sender, args.length > 1 ? Boolean.valueOf(args[1]) : false);
+            sender.sendMessage(ChatColor.BLUE + "You successfully reported " + ChatColor.RED + target);
+            plugin.saveReports();
+            sender.getServer().getOnlinePlayers().parallelStream().filter(p -> p.isOp() || p.hasPermission("iReport.seereport")).forEach(p -> p.sendMessage(ChatColor.RED + player + " has reported " + target + " for swearing"));
             return true;
         }
         return false;

@@ -1,9 +1,6 @@
 package iReport.commands;
 
-import java.util.stream.Stream;
-
-import iReport.iReport;
-import iReport.mysql.MYSQL;
+import iReport.IReport;
 import iReport.util.Utils;
 
 import org.bukkit.ChatColor;
@@ -13,9 +10,9 @@ import org.bukkit.command.CommandSender;
 
 public class HReport implements CommandExecutor {
 
-    private iReport plugin;
+    private IReport plugin;
 
-    public HReport(iReport plugin) {
+    public HReport(IReport plugin) {
         this.plugin = plugin;
     }
 
@@ -29,14 +26,10 @@ public class HReport implements CommandExecutor {
                 return true;
             }
             plugin.getReports().set("reports.hacking." + player, new StringBuilder("type: ").append(args[1]).toString() + "; " + target);
+            Utils.reportplayer(target, "hReport: " + args[1] + " ", sender, args.length > 2 ? Boolean.valueOf(args[1]) : false);
             sender.sendMessage(ChatColor.BLUE + "You successfully reported " + ChatColor.RED + target);
             plugin.saveReports();
-            if (MYSQL.isenable) {
-                plugin.getMYSQL().queryUpdate("INSERT INTO reports (`name`,`Reason`) values ('" + target + "','" + args[1] + "')");
-            }
-
-            Stream.of(sender.getServer().getOnlinePlayers()).parallel().filter(p -> p.isOp() || p.hasPermission("iReport.seereport")).forEach(p -> p.sendMessage(ChatColor.RED + player + " has reported " + target + " for hacking " + args[1]));
-            Utils.reportplayer(target, "hReport: " + args[1] + " ", sender, args.length > 2 ? Boolean.valueOf(args[1]) : false);
+            sender.getServer().getOnlinePlayers().parallelStream().filter(p -> p.isOp() || p.hasPermission("iReport.seereport")).forEach(p -> p.sendMessage(ChatColor.RED + player + " has reported " + target + " for hacking " + args[1]));
             return true;
         }
         return false;

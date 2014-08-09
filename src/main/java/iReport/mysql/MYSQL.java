@@ -5,7 +5,6 @@ import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.SQLException;
 
 import org.bukkit.configuration.file.FileConfiguration;
@@ -13,15 +12,13 @@ import org.bukkit.configuration.file.YamlConfiguration;
 
 public class MYSQL {
 
-    public static boolean isenable;
+    public boolean isenable;
     private String host;
     private int port;
     private String user;
     private String password;
     private String database;
-
     private Connection conn;
-    private static MYSQL sql;
 
     public MYSQL() throws Exception {
         File file = new File("plugins/iReport/", "database.yml");
@@ -51,17 +48,6 @@ public class MYSQL {
         }
     }
 
-    public static MYSQL getMYSQL() {
-        if (sql == null) {
-            try {
-                sql = new MYSQL();
-            } catch (Exception e) {
-                System.err.println("fail to cornedt to MYSQL");
-            }
-        }
-        return sql;
-    }
-
     public Connection oppenConnection() throws Exception {
         Class.forName("com.mysql.jdbc.Driver");
         conn = DriverManager.getConnection("jdbc:mysql://" + this.host + ":" + this.port + "/" + this.database, this.user, this.password);
@@ -82,29 +68,14 @@ public class MYSQL {
     }
 
     public void queryUpdate(String query) {
-        PreparedStatement st = null;
-        try {
-            st = conn.prepareStatement(query);
+        if (!isenable) {
+            return;
+        }
+        try (PreparedStatement st = conn.prepareStatement(query)) {
             st.executeUpdate();
         } catch (SQLException e) {
+            // e.printStackTrace(); // debug code
             System.err.println("Failed to send update '" + query + "'.");
-        } finally {
-            this.closeRessources(null, st);
-        }
-    }
-
-    public void closeRessources(ResultSet rs, PreparedStatement st) {
-        if (rs != null) {
-            try {
-                rs.close();
-            } catch (SQLException e) {
-            }
-        }
-        if (st != null) {
-            try {
-                st.close();
-            } catch (SQLException e) {
-            }
         }
     }
 
