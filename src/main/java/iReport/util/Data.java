@@ -13,10 +13,10 @@ public class Data implements Serializable {
     public static Data instens;
 
     public Data() {
-        playermap = new HashMap<UUID, String>();
-        playermapo = new HashMap<UUID, String>();
-        playermapr = new HashMap<UUID, String>();
-        playermapor = new HashMap<String, UUID>();
+        playermap = new HashMap<>();
+        playermapo = new HashMap<>();
+        playermapr = new HashMap<>();
+        playermapor = new HashMap<>();
     }
 
     public static Data init() {

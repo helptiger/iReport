@@ -29,7 +29,7 @@ public class greport implements CommandExecutor {
             Utils.reportplayer(target, "gReport: " + Utils.getxyz(args[0], null) + " ", sender, args.length > 1 ? Boolean.valueOf(args[1]) : false);
             sender.sendMessage(ChatColor.BLUE + "You successfully reported " + ChatColor.RED + target);
             plugin.saveReports();
-            sender.getServer().getOnlinePlayers().parallelStream().filter(p -> p.isOp() || p.hasPermission("iReport.seereport")).forEach(p -> p.sendMessage(ChatColor.RED + player + " has reported " + target + " for griefing"));
+            sender.getServer().getOnlinePlayers().parallelStream().filter(p -> (p.isOp() || p.hasPermission("iReport.seereport")) && p != sender).forEach(p -> p.sendMessage(ChatColor.RED + player + " has reported " + target + " for griefing"));
             return true;
         }
         return false;

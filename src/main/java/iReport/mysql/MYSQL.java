@@ -13,6 +13,7 @@ import org.bukkit.configuration.file.YamlConfiguration;
 public class MYSQL {
 
     public boolean isenable;
+    private boolean debug;
     private String host;
     private int port;
     private String user;
@@ -31,6 +32,7 @@ public class MYSQL {
         cfg.addDefault(db + "user", "user");
         cfg.addDefault(db + "password", "password");
         cfg.addDefault(db + "database", "database");
+        cfg.addDefault(db + "debug", false);
         cfg.options().copyDefaults(true);
         try {
             cfg.save(file);
@@ -43,6 +45,7 @@ public class MYSQL {
         this.user = cfg.getString(db + "user");
         this.password = cfg.getString(db + "passsword");
         this.database = cfg.getString(db + "database");
+        this.debug = cfg.getBoolean(db + "database");
         if (isenable) {
             this.oppenConnection();
         }
@@ -74,7 +77,9 @@ public class MYSQL {
         try (PreparedStatement st = conn.prepareStatement(query)) {
             st.executeUpdate();
         } catch (SQLException e) {
-            // e.printStackTrace(); // debug code
+            if (debug) {
+                e.printStackTrace();
+            }
             System.err.println("Failed to send update '" + query + "'.");
         }
     }

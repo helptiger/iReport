@@ -27,6 +27,9 @@ public class Utils implements Listener {
             Data.init().playermap.put(p.getUniqueId(), p.getName());
         } else if (Data.init().playermap.get(p.getUniqueId()) != p.getName()) {
             Data.init().playermap.put(p.getUniqueId(), p.getName());
+            if (isReported(p.getUniqueId())) {
+                updateusernameMYSQL(p.getUniqueId(), p.getName());
+            }
         }
     }
 

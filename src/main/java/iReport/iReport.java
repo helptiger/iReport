@@ -28,6 +28,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.bukkit.command.Command;
+import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -38,6 +39,8 @@ public class IReport extends JavaPlugin {
     public static MYSQL sql;
     private final File reportsfile;
     private YamlConfiguration newConfig;
+    private static final CommandExecutor DREPORT = new Dreport();
+    private static final CommandExecutor REPORTS = new Reports();
 
     public IReport() {
         this.reportsfile = new File(getDataFolder(), "reports.yml");
@@ -58,13 +61,13 @@ public class IReport extends JavaPlugin {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if (label.equalsIgnoreCase("dreport") && args.length == 1) {
-            return new Dreport().onCommand(sender, command, label, args);
+            return DREPORT.onCommand(sender, command, label, args);
         }
         if (label.equalsIgnoreCase("reports")) {
-            return new Reports().onCommand(sender, command, label, args);
+            return REPORTS.onCommand(sender, command, label, args);
         }
 
-        return super.onCommand(sender, command, label, args);
+        return false;
     }
 
     @Override
@@ -148,7 +151,7 @@ public class IReport extends JavaPlugin {
         }
         if (sender.hasPermission("iReport.reports") && alias.equalsIgnoreCase("reports")) {
             if (args.length < 2) {
-                List<String> l = new ArrayList<String>();
+                List<String> l = new ArrayList<>();
                 if ("uuid".startsWith(args[0].toLowerCase())) {
                     l.add("uuid");
                 }
@@ -157,10 +160,10 @@ public class IReport extends JavaPlugin {
                 }
                 return l;
             }
-            if (args[0].toLowerCase().equals("uuid")) {
+            if (args[0].equalsIgnoreCase("uuid")) {
                 return set.filter(s -> s.startsWith(args[1])).collect(Collectors.toList());
             }
-            if (args[0].toLowerCase().equals("usernameo")) {
+            if (args[0].equalsIgnoreCase("usernameo")) {
                 return Data.init().playermapo.values().parallelStream().filter(s -> s.startsWith(args[1])).collect(Collectors.toList());
             }
         }

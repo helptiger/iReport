@@ -1,9 +1,7 @@
 package iReport.commands;
 
 import java.util.Arrays;
-import java.util.Iterator;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.UUID;
 
 import static iReport.util.Data.init;
@@ -56,12 +54,10 @@ public class Reports implements CommandExecutor {
                 sender.sendMessage(ChatColor.RED + "invalid UUID");
             }
         } else if (args.length == 0) {
-            Iterator<Entry<UUID, String>> iterator3 = map3.entrySet().iterator();
-            while (iterator3.hasNext()) {
-                Entry<UUID, String> e = iterator3.next();
+            map3.entrySet().stream().forEach(e -> {
                 UUID u = e.getKey();
                 sender.sendMessage("UUID: " + u + " currentname: " + map1.get(u) + " " + e.getValue() + "username: " + map2.get(u));
-            }
+            });
             return true;
         }
 
