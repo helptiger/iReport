@@ -39,8 +39,8 @@ public class IReport extends JavaPlugin {
     public static MYSQL sql;
     private final File reportsfile;
     private YamlConfiguration newConfig;
-    private static final CommandExecutor DREPORT = new Dreport();
-    private static final CommandExecutor REPORTS = new Reports();
+    private final CommandExecutor DREPORT = new Dreport();
+    private final CommandExecutor REPORTS = new Reports();
 
     public IReport() {
         this.reportsfile = new File(getDataFolder(), "reports.yml");
@@ -103,6 +103,9 @@ public class IReport extends JavaPlugin {
         try (ObjectInputStream o = new ObjectInputStream(new FileInputStream(new File(getDataFolder(), "data.bin")))) {
             Data.instens = (Data) o.readObject();
         } catch (FileNotFoundException e) {
+        } catch (ClassCastException e) {
+            e.printStackTrace();
+            logger.log(Level.SEVERE, "Don't modyfy data.bin");
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -145,9 +148,9 @@ public class IReport extends JavaPlugin {
 
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        Stream<String> set = Data.init().playermapo.keySet().parallelStream().map(UUID::toString);
+        Stream<String> stream = Data.init().playermapo.keySet().parallelStream().map(UUID::toString);
         if (sender.hasPermission("iReport.dreport") && alias.equalsIgnoreCase("dreport")) {
-            return set.filter(s -> s.startsWith(args[0])).collect(Collectors.toList());
+            return stream.filter(s -> s.startsWith(args[0])).collect(Collectors.toList());
         }
         if (sender.hasPermission("iReport.reports") && alias.equalsIgnoreCase("reports")) {
             if (args.length < 2) {
@@ -158,10 +161,13 @@ public class IReport extends JavaPlugin {
                 if ("usernameo".startsWith(args[0].toLowerCase())) {
                     l.add("usernameo");
                 }
+                if ("gui".startsWith(args[0].toLowerCase())) {
+                    l.add("gui");
+                }
                 return l;
             }
             if (args[0].equalsIgnoreCase("uuid")) {
-                return set.filter(s -> s.startsWith(args[1])).collect(Collectors.toList());
+                return stream.filter(s -> s.startsWith(args[1])).collect(Collectors.toList());
             }
             if (args[0].equalsIgnoreCase("usernameo")) {
                 return Data.init().playermapo.values().parallelStream().filter(s -> s.startsWith(args[1])).collect(Collectors.toList());
