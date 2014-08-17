@@ -45,7 +45,7 @@ public class MYSQL {
         this.user = cfg.getString(db + "user");
         this.password = cfg.getString(db + "passsword");
         this.database = cfg.getString(db + "database");
-        this.debug = cfg.getBoolean(db + "database");
+        this.debug = cfg.getBoolean(db + "debug");
         if (isenable) {
             this.oppenConnection();
         }
