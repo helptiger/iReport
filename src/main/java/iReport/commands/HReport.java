@@ -29,7 +29,7 @@ public class HReport implements CommandExecutor {
             Utils.reportplayer(target, "hReport: " + args[1] + " ", sender, args.length > 2 ? Boolean.valueOf(args[1]) : false);
             sender.sendMessage(ChatColor.BLUE + "You successfully reported " + ChatColor.RED + target);
             plugin.saveReports();
-            sender.getServer().getOnlinePlayers().parallelStream().filter(p -> (p.isOp() || p.hasPermission("iReport.seereport")) && p != sender).forEach(p -> p.sendMessage(ChatColor.RED + player + " has reported " + target + " for hacking " + args[1]));
+            sender.getServer().getOnlinePlayers().parallelStream().filter(p -> (p.isOp() || p.hasPermission("iReport.seereport")) && p != sender).forEach(p -> p.sendMessage(ChatColor.RED + player + " has reported " + target + " for " + args[1] + " hacking "));
             return true;
         }
         return false;
