@@ -65,7 +65,9 @@ public class MYSQL {
         try {
             return this.conn != null || this.conn.isValid(1);
         } catch (SQLException e) {
-            e.printStackTrace();
+            if (debug) {
+                e.printStackTrace();
+            }
             return false;
         }
     }
@@ -88,7 +90,9 @@ public class MYSQL {
         try {
             this.conn.close();
         } catch (SQLException e) {
-            e.printStackTrace();
+            if (debug) {
+                e.printStackTrace();
+            }
         } finally {
             this.conn = null;
 
