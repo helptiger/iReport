@@ -1,6 +1,7 @@
 package iReport.commands;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -20,6 +21,8 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.SkullMeta;
 
 public class Reports implements CommandExecutor {
+    
+    private static final Map<UUID, ItemStack> heads = new HashMap<>();
 
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String lable, String[] args) {
@@ -30,13 +33,18 @@ public class Reports implements CommandExecutor {
             Inventory inv = calculate(init().playermapo.size());
             map2.keySet().parallelStream().forEach(uuid -> {
                 List<String> list = new ArrayList<>();
-                ItemStack i = new ItemStack(Material.SKULL_ITEM, 1);
-                i.setDurability((short) 3);
-                SkullMeta meta = (SkullMeta) i.getItemMeta();
-                meta.setOwner(map1.get(uuid));
-                meta.setDisplayName(map1.get(uuid));
-                meta.setLore(setLore(list, uuid));
-                i.setItemMeta(meta);
+                ItemStack i = heads.get(uuid);
+                if (i == null) {
+                    i = new ItemStack(Material.SKULL_ITEM, 1);
+                    i.setDurability((short) 3);
+                    SkullMeta meta = (SkullMeta) i.getItemMeta();
+                    meta.setOwner(map1.get(uuid));
+                    meta.setDisplayName(map1.get(uuid));
+                    meta.setLore(setLore(list, uuid));
+                    i.setItemMeta(meta);
+                    heads.put(uuid, i);
+                }
+               
                 inv.addItem(i);
             });
             ((HumanEntity) sender).openInventory(inv);

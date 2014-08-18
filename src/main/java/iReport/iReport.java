@@ -148,7 +148,11 @@ public class IReport extends JavaPlugin {
 
     @Override
     public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        Stream<String> stream = Data.init().playermapo.keySet().parallelStream().map(UUID::toString);
+        Stream<String> stream = null;
+        if ((sender.hasPermission("iReport.dreport") && alias.equalsIgnoreCase("dreport")) || (sender.hasPermission("iReport.reports") 
+                && alias.equalsIgnoreCase("reports") && args[0].equalsIgnoreCase("uuid"))) {
+            stream = Data.init().playermapo.keySet().parallelStream().map(UUID::toString);
+        }
         if (sender.hasPermission("iReport.dreport") && alias.equalsIgnoreCase("dreport")) {
             return stream.filter(s -> s.startsWith(args[0])).collect(Collectors.toList());
         }
