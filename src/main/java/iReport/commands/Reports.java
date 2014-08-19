@@ -47,11 +47,11 @@ public class Reports implements CommandExecutor {
             try {
                 if (args[0].equalsIgnoreCase("uuid")) {
                     UUID u = UUID.fromString(args[1]);
-                    setLore(new ArrayList<String>(), u).parallelStream().forEach(sender::sendMessage);
+                    setLore(new ArrayList<String>(), u).stream().forEach(sender::sendMessage);
                 }
                 if (args[0].equalsIgnoreCase("usernameo")) {
                     UUID u = init().playermapor.get(args[1]);
-                    setLore(new ArrayList<String>(), u).parallelStream().forEach(sender::sendMessage);
+                    setLore(new ArrayList<String>(), u).stream().forEach(sender::sendMessage);
                 }
                 return true;
             } catch (Exception e) {
@@ -63,7 +63,7 @@ public class Reports implements CommandExecutor {
                 return true;
             }
             map3.entrySet().stream().map(Entry::getKey).forEach(u -> {
-                setLore(new ArrayList<String>(), u).parallelStream().forEach(sender::sendMessage);
+                setLore(new ArrayList<String>(), u).stream().forEach(sender::sendMessage);
                 sender.sendMessage(" ");
             });
             return true;
@@ -78,7 +78,7 @@ public class Reports implements CommandExecutor {
         Map<UUID, String> map3 = init().playermapr;
         list.add("UUID: " + uuid);
         list.add("currentname: " + map1.get(uuid));
-        Stream.of(map3.get(uuid).split(";")).parallel().forEach(list::add);
+        Stream.of(map3.get(uuid).split(";")).forEach(list::add);
         list.add("username: " + map2.get(uuid));
         return list;
     }
