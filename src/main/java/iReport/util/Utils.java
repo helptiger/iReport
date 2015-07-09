@@ -1,42 +1,46 @@
 package iReport.util;
 
-import iReport.IReport;
 import static iReport.util.Data.init;
 
+import java.io.File;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.logging.Level;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+import java.util.stream.Collectors;
 
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
-import org.bukkit.Location;
-import org.bukkit.command.CommandSender;
-import org.bukkit.entity.Player;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.Listener;
-import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.event.player.PlayerLoginEvent;
+import org.spongepowered.api.entity.player.Player;
+import org.spongepowered.api.event.Subscribe;
+import org.spongepowered.api.event.entity.player.PlayerJoinEvent;
+import org.spongepowered.api.text.Texts;
+import org.spongepowered.api.text.format.TextColors;
+import org.spongepowered.api.util.command.CommandException;
+import org.spongepowered.api.util.command.CommandSource;
 
-@SuppressWarnings(value = { "deprecation" })
-public class Utils implements Listener {
+import com.flowpowered.math.vector.Vector3d;
 
-    @EventHandler
-    public void login(final PlayerLoginEvent event) {
-        Player p = event.getPlayer();
+import iReport.IReport;
+import ninja.leaping.configurate.ConfigurationNode;
+import ninja.leaping.configurate.hocon.HoconConfigurationLoader;
+
+public enum Utils {
+    INSTENCE;
+    
+    public static final Lock LOCK = new ReentrantLock();
+
+    @Subscribe(ignoreCancelled = false)
+    public void login(PlayerJoinEvent event) {
+        Player p = event.getEntity();
         if (!Data.init().playermap.containsKey(p.getUniqueId())) {
             Data.init().playermap.put(p.getUniqueId(), p.getName());
         } else if (Data.init().playermap.get(p.getUniqueId()) != p.getName()) {
             Data.init().playermap.put(p.getUniqueId(), p.getName());
-            if (isReported(p.getUniqueId())) {
-                updateusernameMYSQL(p.getUniqueId(), p.getName());
+            if (Utils.isReported(p.getUniqueId())) {
+                Utils.updateusernameMYSQL(p.getUniqueId(), p.getName());
             }
-        }
-    }
-
-    @EventHandler
-    public void invcliock(InventoryClickEvent event) {
-        if (event.getInventory().getTitle().equals("reports")) {
-            event.setCancelled(true);
         }
     }
 
@@ -44,46 +48,43 @@ public class Utils implements Listener {
         return Data.init().playermapr.get(uniqueId) != null;
     }
 
-    public static String getxyz(String p, CommandSender sender) {
+    public static String getxyz(String p, CommandSource source) throws CommandException {
         try {
-            Location loc = Bukkit.getPlayer(p).getLocation();
-            return String.valueOf("world "+ loc.getWorld().getName() + " x " + loc.getBlockX() + " y " + loc.getBlockY() + " z " + loc.getBlockZ());
-        } catch (Exception e) {
-            if (sender != null) {
-                IReport.logger.log(Level.WARNING, p + " is not online");
-                sender.sendMessage(ChatColor.RED + p + " is not online");
-            }
+            Player player = IReport.server.getPlayer(p).get();
+            Vector3d loc = player.getLocation().getPosition();
+            return String.valueOf("world " + player.getWorld().getName() + " x " + (int)loc.getX() + " y " + (int)loc.getY() + " z " + (int)loc.getZ());
+        } catch (IllegalStateException e) {
+            throw new CommandException(Texts.builder(p + " is not online").color(TextColors.RED).build());
         }
-
-        return null;
-
     }
 
-    public static void reportplayer(String target, String reporttype, CommandSender sender, boolean b) {
+    public static void reportplayer(String target, String reporttype, CommandSource sender, boolean forcw) {
         boolean isreported = false;
         UUID p = null;
         try {
-            p = Bukkit.getPlayer(target).getUniqueId();
-        } catch (NullPointerException e) {
+            p = IReport.server.getPlayer(target).get().getUniqueId();
+        } catch (IllegalStateException e) {
+            sender.sendMessage(Texts.builder(target + " is not online").color(TextColors.RED).build());
             return;
         }
         Data data = Data.init();
         data.playermapo.put(p, target);
         Object o = data.playermapor.get(target);
-        if (!data.playermapor.containsKey(target) && o == null ? true : o.equals(p) || b)
+        if (!data.playermapor.containsKey(target) && o == null ? true : o.equals(p) || forcw)
             data.playermapor.put(target, p);
         else
-            sender.sendMessage("player " + target + " is alredy reported with another UUID please look at the reports or add true");
-        synchronized (data.playermap.get(p)) {
-            if (data.playermapr.containsKey(p)) {
-                isreported = true;
-                String s = data.playermapr.get(p);
-                data.playermapr.put(p, s + reporttype + "reporter: " + sender.getName() + " ;");
-            } else {
-                data.playermapr.put(p, reporttype + "reporter: " + sender.getName() + " ;");
-            }
+            sender.sendMessage(Texts.of("player " + target + " is alredy reported with another UUID please look at the reports or add true"));
+        LOCK.lock();
+        if (data.playermapr.containsKey(p)) {
+            isreported = true;
+            String s = data.playermapr.get(p);
+            data.playermapr.put(p, s + reporttype + "reporter: " + sender.getName() + " ;");
+        } else {
+            data.playermapr.put(p, reporttype + "reporter: " + sender.getName() + " ;");
         }
-        updateMYSQL(Bukkit.getPlayer(target), isreported);
+        savePlayer(p);
+        LOCK.unlock();
+        updateMYSQL(IReport.server.getPlayer(target).get(), isreported);
     }
 
     public static void updateMYSQL(Player player, boolean isReported) {
@@ -91,16 +92,50 @@ public class Utils implements Listener {
         Map<UUID, String> map1 = init().playermap;
         Map<UUID, String> map2 = init().playermapo;
         Map<UUID, String> map3 = init().playermapr;
-        if (isReported) {
+        if (!isReported) {
             IReport.getMYSQL().queryUpdate("INSERT INTO reports (`uuid`, `currentname`, `Report`, `username`) values ('" + uuid + "','" + map1.get(uuid) + "','" + map3.get(uuid) + "','" + map2.get(uuid) + "')");
         } else {
             IReport.getMYSQL().queryUpdate("UPDATE Reports SET Report = '" + map3.get(uuid) + "' WHERE uuid = '" + uuid + "'");
-
         }
-
     }
 
     public static void updateusernameMYSQL(UUID uniqueId, String name) {
         IReport.getMYSQL().queryUpdate("UPDATE Reports SET currentname = '" + name + "' WHERE uuid = '" + uniqueId + "'");
     }
+
+    public static void printStackTrace(Throwable t) {
+        IReport.LOGGER.error(t.toString());
+        for (StackTraceElement Element : t.getStackTrace()) {
+            IReport.LOGGER.error("\tat " + Element.toString());
+        }
+        for (Throwable tb : t.getSuppressed()) {
+            IReport.LOGGER.error("\tSuppressed: "+tb.toString());
+            for (StackTraceElement Element : tb.getStackTrace()) {
+                IReport.LOGGER.error("\t \tat " + Element.toString());
+            }
+        }
+    }
+    
+    public static List<String> getPlayerNames() {
+        return IReport.server.getOnlinePlayers().parallelStream().map(Player::getName).collect(Collectors.toList());
+    }
+    
+    public static void savePlayer(UUID uuid) {
+        File file = new File(IReport.configfolder, "reports.cfg");
+        HoconConfigurationLoader cfgfile = HoconConfigurationLoader.builder().setFile(file).build();
+        ConfigurationNode config;
+        try {
+            config = cfgfile.load();
+            ConfigurationNode node = config.getNode("reports");
+            Map<String, String> configDefaults = new HashMap<String, String>();
+            ConfigurationNode node2 = node.getNode(uuid.toString());
+            configDefaults.put("reportedename", Data.init().playermapo.get(uuid));
+            configDefaults.put("currenttname", Data.init().playermap.get(uuid));
+            configDefaults.put("reports", Data.init().playermapr.get(uuid));
+            node2.setValue(configDefaults);
+            cfgfile.save(config);
+        } catch (IOException e) {
+            printStackTrace(e);
+        }
+    }    
 }

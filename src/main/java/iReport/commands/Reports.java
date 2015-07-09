@@ -1,97 +1,163 @@
 package iReport.commands;
 
+import static iReport.util.Data.init;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.UUID;
-import java.util.stream.Stream;
+import java.util.stream.Collectors;
+import org.spongepowered.api.data.manipulator.OwnableData;
+import org.spongepowered.api.data.manipulator.item.LoreData;
+import org.spongepowered.api.entity.living.Human;
+import org.spongepowered.api.item.ItemTypes;
+import org.spongepowered.api.item.inventory.Inventories;
+import org.spongepowered.api.item.inventory.ItemStack;
+import org.spongepowered.api.item.inventory.custom.CustomInventory;
+import org.spongepowered.api.text.Text;
+import org.spongepowered.api.text.Texts;
+import org.spongepowered.api.text.format.TextColors;
+import org.spongepowered.api.util.command.CommandCallable;
+import org.spongepowered.api.util.command.CommandException;
+import org.spongepowered.api.util.command.CommandResult;
+import org.spongepowered.api.util.command.CommandSource;
 
-import static iReport.util.Data.init;
+import com.google.common.base.Optional;
+import com.google.common.collect.Lists;
 
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
-import org.bukkit.Material;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.CommandSender;
-import org.bukkit.entity.HumanEntity;
-import org.bukkit.inventory.Inventory;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.SkullMeta;
+import iReport.IReport;
+import iReport.util.Data;
+import iReport.util.TranslatableWrapper;
 
-public class Reports implements CommandExecutor {
-    
-    @Override
-    public boolean onCommand(CommandSender sender, Command cmd, String lable, String[] args) {
+public final class Reports implements CommandCallable {
+
+    private List<Text> setLore(UUID uuid) {
+        List<Text> list = new ArrayList<Text>();
         Map<UUID, String> map1 = init().playermap;
         Map<UUID, String> map2 = init().playermapo;
         Map<UUID, String> map3 = init().playermapr;
-        if (sender instanceof HumanEntity && args.length == 1 && args[0].equalsIgnoreCase("gui")) {
-            Inventory inv = calculate(init().playermapo.size());
+        list.add(Texts.of("UUID: " + uuid));
+        list.add(Texts.of("currentname: " + map1.get(uuid)));
+        for (String string : map3.get(uuid).split(";")) {
+            list.add(Texts.of(string));
+        }
+        list.add(Texts.of("username: " + map2.get(uuid)));
+        return list;
+    }
+
+    private CustomInventory calculate(int size) {
+        TranslatableWrapper t = new TranslatableWrapper("reports");
+        float f = size;
+        f = f / 9;
+        if (f == size / 9) {
+            return Inventories.customInventoryBuilder().name(t).size((int) (f * 9)).build();
+        }
+        size = size / 9;
+        size++;
+        size = size * 9;
+        return Inventories.customInventoryBuilder().name(t).size(size).build();
+    }
+
+    @Override
+    public List<String> getSuggestions(CommandSource source, String arguments) throws CommandException {
+        if (!testPermission(source)) {
+            return Lists.newArrayList();
+        }
+        String[] args = arguments.split(" ");
+        if (args.length < 2) {
+            List<String> l = Lists.newArrayList();
+            if ("uuid".startsWith(args[0].toLowerCase())) {
+                l.add("uuid");
+            }
+            if ("usernameo".startsWith(args[0].toLowerCase())) {
+                l.add("usernameo");
+            }
+            if ("gui".startsWith(args[0].toLowerCase())) {
+                l.add("gui");
+            }
+            return l;
+        }
+        if (args[0].equalsIgnoreCase("uuid")) {
+            return Data.init().playermapo.keySet().parallelStream().map(UUID::toString).filter(s -> s.startsWith(args.length > 1 ? args[1] : "")).collect(Collectors.toList());
+        }
+        if (args[0].equalsIgnoreCase("usernameo")) {
+            return Data.init().playermapo.values().parallelStream().filter(s -> s.startsWith(args.length > 1 ? args[1] : "")).collect(Collectors.toList());
+        }
+        return Lists.newArrayList();
+    }
+
+    @Override
+    public Optional<CommandResult> process(CommandSource source, String arguments) throws CommandException {
+        if (!testPermission(source)) {
+            source.sendMessage(Texts.of(TextColors.RED, "You don't have permission to use this command"));
+            return Optional.<CommandResult>absent();
+        }
+        String[] args = arguments.split(" ");
+        Map<UUID, String> map1 = init().playermap;
+        Map<UUID, String> map2 = init().playermapo;
+        Map<UUID, String> map3 = init().playermapr;
+        if (source instanceof Human && args.length == 1 && args[0].equalsIgnoreCase("gui")) {
+            CustomInventory inv = calculate(init().playermapo.size());
             map2.keySet().parallelStream().forEach(uuid -> {
-                List<String> list = new ArrayList<>();
-                ItemStack i = new ItemStack(Material.SKULL_ITEM, 1);
-                i.setDurability((short) 3);
-                SkullMeta meta = (SkullMeta) i.getItemMeta();
-                meta.setOwner(map1.get(uuid));
-                meta.setDisplayName(map1.get(uuid));
-                meta.setLore(setLore(list, uuid));
-                i.setItemMeta(meta);
-                inv.addItem(i);
+                ItemStack i = IReport.game.getRegistry().getItemBuilder().itemType(ItemTypes.SKULL).quantity(1).build();
+                OwnableData od = i.getOrCreate(OwnableData.class).get();
+                od.setProfile(IReport.game.getRegistry().createGameProfile(uuid, map1.get(uuid)));
+                i.offer(od);
+                LoreData ld = i.getOrCreate(LoreData.class).get();
+                ld.set(setLore(uuid));
+                i.offer(ld);
+                inv.offer(i);
             });
-            ((HumanEntity) sender).openInventory(inv);
-            return true;
+            ((Human) source).openInventory(inv);
+            return Optional.of(CommandResult.success());
         }
         if (args.length == 2) {
             try {
                 if (args[0].equalsIgnoreCase("uuid")) {
                     UUID u = UUID.fromString(args[1]);
-                    setLore(new ArrayList<String>(), u).stream().forEach(sender::sendMessage);
+                    source.sendMessage(setLore(u));
                 }
                 if (args[0].equalsIgnoreCase("usernameo")) {
                     UUID u = init().playermapor.get(args[1]);
-                    setLore(new ArrayList<String>(), u).stream().forEach(sender::sendMessage);
+                    source.sendMessage(setLore(u));
                 }
-                return true;
+                return Optional.of(CommandResult.success());
             } catch (Exception e) {
-                sender.sendMessage(ChatColor.RED + "invalid UUID");
+                throw new CommandException(Texts.builder("invalid UUID").color(TextColors.RED).build());
             }
-        } else if (args.length == 0) {
-            if (map3.entrySet().size() == 0) {
-                sender.sendMessage(ChatColor.RED + "There is no reports");
-                return true;
+        } else {
+            if (map3.isEmpty()) {
+                source.sendMessage(Texts.builder("There is no reports").color(TextColors.RED).build());
+                return Optional.of(CommandResult.success());
             }
-            map3.entrySet().stream().map(Entry::getKey).forEach(u -> {
-                setLore(new ArrayList<String>(), u).stream().forEach(sender::sendMessage);
-                sender.sendMessage(" ");
-            });
-            return true;
+            for (Entry<UUID, String> entry : map3.entrySet()) {
+                UUID u = entry.getKey();
+                source.sendMessage(setLore(u));
+                source.sendMessage(Texts.of(" "));
+            }
+            return Optional.of(CommandResult.success());
         }
-
-        return false;
     }
 
-    private List<String> setLore(List<String> list, UUID uuid) {
-        Map<UUID, String> map1 = init().playermap;
-        Map<UUID, String> map2 = init().playermapo;
-        Map<UUID, String> map3 = init().playermapr;
-        list.add("UUID: " + uuid);
-        list.add("currentname: " + map1.get(uuid));
-        Stream.of(map3.get(uuid).split(";")).forEach(list::add);
-        list.add("username: " + map2.get(uuid));
-        return list;
+    @Override
+    public boolean testPermission(CommandSource source) {
+        return source.hasPermission("ireport.reports");
     }
 
-    private Inventory calculate(int size) {
-        double f = size;
-        f = f / 9;
-        if (f == size / 9) {
-            return Bukkit.createInventory(null, (int) (f * 9), "reports");
-        }
-        size = size / 9;
-        size++;
-        size = size * 9;
-        return Bukkit.createInventory(null, size, "reports");
+    @Override
+    public Optional<Text> getShortDescription(CommandSource source) {
+        return Optional.of((Text)Texts.of("Shows a list of reported players"));
     }
+
+    @Override
+    public Optional<Text> getHelp(CommandSource source) {
+        return Optional.of((Text)Texts.of("Shows a list of reported players"));
+    }
+
+    @Override
+    public Text getUsage(CommandSource source) {
+        return Texts.of("[gui]");
+    }
+
 }

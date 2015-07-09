@@ -1,24 +1,57 @@
 package iReport.commands;
 
-import org.bukkit.ChatColor;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.CommandSender;
+import java.util.List;
 
-public class ireportc implements CommandExecutor {
+import org.spongepowered.api.text.Text;
+import org.spongepowered.api.text.Texts;
+import org.spongepowered.api.text.format.TextColors;
+import org.spongepowered.api.util.command.CommandCallable;
+import org.spongepowered.api.util.command.CommandException;
+import org.spongepowered.api.util.command.CommandResult;
+import org.spongepowered.api.util.command.CommandSource;
+
+import com.google.common.base.Optional;
+import com.google.common.collect.Lists;
+
+public final class ireportc implements CommandCallable {
 
     @Override
-    public boolean onCommand(CommandSender sender, Command arg1, String arg2, String[] arg3) {
-        sender.sendMessage(ChatColor.YELLOW + "==============================");
-        sender.sendMessage(ChatColor.GREEN + "/greport - Report a griefer");
-        sender.sendMessage(ChatColor.GREEN + "/hreport - Report a hacker");
-        sender.sendMessage(ChatColor.GREEN + "/sreport - Report a swearer");
-        sender.sendMessage(ChatColor.GREEN + "/ireport - Show this help menu");
-        sender.sendMessage(ChatColor.GREEN + "/reports - Shows all reported players");
-        sender.sendMessage(ChatColor.GREEN + "/reports gui - shows all reported players in a GUI");
-        sender.sendMessage(ChatColor.GREEN + "/dreport - Delete a report");
-        sender.sendMessage(ChatColor.YELLOW + "==============================");
-        sender.sendMessage(ChatColor.BLUE + "Created by tudse145 & heni123321");
+    public List<String> getSuggestions(CommandSource source, String arguments) throws CommandException {
+        return Lists.newArrayList();
+    }
+
+    @Override
+    public Optional<CommandResult> process(CommandSource source, String arguments) throws CommandException {
+        source.sendMessage(Texts.builder("==============================").color(TextColors.YELLOW).build());
+        source.sendMessage(Texts.builder("/greport - Report a griefer").color(TextColors.GREEN).build());
+        source.sendMessage(Texts.builder("/hreport - Report a hacker").color(TextColors.GREEN).build());
+        source.sendMessage(Texts.builder("/sreport - Report a swearer").color(TextColors.GREEN).build());
+        source.sendMessage(Texts.builder("/ireport - Show this help menu").color(TextColors.GREEN).build());
+        source.sendMessage(Texts.builder("/reports - Shows all reported players").color(TextColors.GREEN).build());
+        source.sendMessage(Texts.builder("/reports gui - Shows all reported players in a GUI").color(TextColors.GREEN).build());
+        source.sendMessage(Texts.builder("/dreport - Delete a report").color(TextColors.GREEN).build());
+        source.sendMessage(Texts.builder("==============================").color(TextColors.YELLOW).build());
+        source.sendMessage(Texts.builder("Created by tudse145 & heni123321").color(TextColors.BLUE).build());
+        return Optional.of(CommandResult.success());
+    }
+
+    @Override
+    public boolean testPermission(CommandSource source) {
         return true;
+    }
+
+    @Override
+    public Optional<Text> getShortDescription(CommandSource source) {
+        return Optional.of((Text)Texts.of("Shows plugin help"));
+    }
+
+    @Override
+    public Optional<Text> getHelp(CommandSource source) {
+        return Optional.of((Text)Texts.of("Shows plugin help"));
+    }
+
+    @Override
+    public Text getUsage(CommandSource source) {
+        return Texts.of("");
     }
 }

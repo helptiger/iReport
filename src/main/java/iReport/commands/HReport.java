@@ -3,36 +3,66 @@ package iReport.commands;
 import iReport.IReport;
 import iReport.util.Utils;
 
-import org.bukkit.ChatColor;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.CommandSender;
+import java.util.List;
 
-public class HReport implements CommandExecutor {
+import org.spongepowered.api.entity.player.Player;
+import org.spongepowered.api.text.Text;
+import org.spongepowered.api.text.Texts;
+import org.spongepowered.api.text.format.TextColors;
+import org.spongepowered.api.util.command.CommandCallable;
+import org.spongepowered.api.util.command.CommandException;
+import org.spongepowered.api.util.command.CommandResult;
+import org.spongepowered.api.util.command.CommandSource;
 
-    private IReport plugin;
+import com.google.common.base.Optional;
 
-    public HReport(IReport plugin) {
-        this.plugin = plugin;
+public final class HReport implements CommandCallable {
+
+    @Override
+    public List<String> getSuggestions(CommandSource source, String arguments) throws CommandException {
+        return Utils.getPlayerNames();
     }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command cmd, String arg1, String[] args) {
-        if (args.length > 1) {
-            String player = sender.getName();
-            String target = args[0];
-            if (!sender.hasPermission("ireport.hreport")) {
-                sender.sendMessage(ChatColor.RED + "You don't have permission to perform this command");
-                return true;
-            }
-            plugin.getReports().set("reports.hacking." + player, new StringBuilder("type: ").append(args[1]).toString() + "; " + target);
-            Utils.reportplayer(target, "hReport: " + args[1] + " ", sender, args.length > 2 ? Boolean.valueOf(args[1]) : false);
-            sender.sendMessage(ChatColor.BLUE + "You successfully reported " + ChatColor.RED + target);
-            plugin.saveReports();
-            sender.getServer().getOnlinePlayers().parallelStream().filter(p -> (p.isOp() || p.hasPermission("iReport.seereport")) && p != sender).forEach(p -> p.sendMessage(ChatColor.RED + player + " has reported " + target + " for " + args[1] + " hacking "));
-            return true;
+    public Optional<CommandResult> process(CommandSource source, String arguments) throws CommandException {
+        if (!testPermission(source)) {
+            source.sendMessage(Texts.of(TextColors.RED, "You don't have permission to use this command"));
+            return Optional.<CommandResult>absent();
         }
-        return false;
+        String[] args = arguments.split(" ");
+        if (args.length > 1 && !args[0].isEmpty() && !args[1].isEmpty()) {
+            String player = source.getName();
+            String target = args[0];
+            Utils.reportplayer(target, "hReport: " + args[1] + " ", source, args.length > 2 ? Boolean.valueOf(args[1]) : false);
+            source.sendMessage(Texts.builder("You successfully reported ").color(TextColors.BLUE).append(Texts.builder(target).color(TextColors.RED).build()).build());
+            for (Player p : IReport.server.getOnlinePlayers()) {
+                if (p.hasPermission("iReport.seereport") && p != source) {
+                    p.sendMessage(Texts.builder(player + " has reported " + target + " for " + args[1] + " hacking ").color(TextColors.RED).build());
+                }
+            }
+            return Optional.of(CommandResult.success());
+        }
+        throw new CommandException(Texts.builder("Not enough arguments").color(TextColors.RED).build());
+    }
+
+    @Override
+    public boolean testPermission(CommandSource source) {
+        return source.hasPermission("ireport.hreport");
+    }
+
+    @Override
+    public Optional<Text> getShortDescription(CommandSource source) {
+        return Optional.of((Text)Texts.of("Reports a player for hack"));
+    }
+
+    @Override
+    public Optional<Text> getHelp(CommandSource source) {
+        return Optional.of((Text)Texts.of("Reports a player for hack"));
+    }
+
+    @Override
+    public Text getUsage(CommandSource source) {
+        return Texts.of("<name>");
     }
 
 }

@@ -1,5 +1,24 @@
 package iReport;
 
+import java.io.File;
+import java.io.IOException;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.UUID;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.spongepowered.api.Game;
+import org.spongepowered.api.Server;
+import org.spongepowered.api.event.Subscribe;
+import org.spongepowered.api.event.state.PreInitializationEvent;
+import org.spongepowered.api.event.state.ServerStoppingEvent;
+import org.spongepowered.api.plugin.Plugin;
+import org.spongepowered.api.plugin.PluginContainer;
+import org.spongepowered.api.service.config.ConfigDir;
+
+import com.google.inject.Inject;
+
 import iReport.commands.Dreport;
 import iReport.commands.HReport;
 import iReport.commands.Reports;
@@ -9,41 +28,23 @@ import iReport.commands.sreport;
 import iReport.mysql.MYSQL;
 import iReport.util.Data;
 import iReport.util.Utils;
+import ninja.leaping.configurate.ConfigurationNode;
+import ninja.leaping.configurate.hocon.HoconConfigurationLoader;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Scanner;
-import java.util.UUID;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
-
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.CommandSender;
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.plugin.java.JavaPlugin;
-
-public class IReport extends JavaPlugin {
-    public static final Logger logger = Logger.getLogger("iReport");
+@Plugin(id = "iReport", name = "iReport", version = "2.0.1-SNAPSHOT")
+public final class IReport {
+    public static final Logger LOGGER = LoggerFactory.getLogger("iReport");
     public static MYSQL sql;
-    private final File reportsfile;
-    private YamlConfiguration newConfig;
-    private final CommandExecutor DREPORT = new Dreport();
-    private final CommandExecutor REPORTS = new Reports();
+    public static Game game;
+    public static Server server;
+    public static PluginContainer controler;
+    public static File configfolder;
 
-    public IReport() {
-        this.reportsfile = new File(getDataFolder(), "reports.yml");
+    @Inject
+    public IReport(Game game, @ConfigDir(sharedRoot = false) File configfolder) {
+        IReport.game = game;
+        IReport.server = game.getServer();
+        IReport.configfolder = configfolder;
     }
 
     public static MYSQL getMYSQL() {
@@ -52,131 +53,78 @@ public class IReport extends JavaPlugin {
                 sql = new MYSQL();
                 sql.queryUpdate("CREATE TABLE IF NOT EXISTS reports (uuid VARCHAR(36) PRIMARY KEY, currentname VARCHAR(16), Report LONGTEXT, username VARCHAR(16))");
             } catch (Exception e) {
-                e.printStackTrace();
+                Utils.printStackTrace(e);
             }
         }
         return sql;
     }
 
-    @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (label.equalsIgnoreCase("dreport") && args.length == 1) {
-            return DREPORT.onCommand(sender, command, label, args);
-        }
-        if (label.equalsIgnoreCase("reports")) {
-            return REPORTS.onCommand(sender, command, label, args);
-        }
-
-        return false;
-    }
-
-    @Override
-    public void onEnable() {
-        try {
-            File f = new File("plugins/iReport/", "config.yml");
-            Scanner sc = new Scanner(f);
-            while (sc.hasNext()) {
-                if (sc.nextLine().contains("reports:")) {
-                    sc.close();
-                    if (f.renameTo(new File("plugins/iReport/", "reports.yml"))) {
-                        break;
-                    } else {
-                        try {
-                            throw new IOException("fail to rename file config.yml, iReport will not load");
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                            return;
-                        }
-                    }
-                }
-            }
-            sc.close();
-        } catch (FileNotFoundException e) {
-        }
-        getCommand("greport").setExecutor(new greport(this));
-        getCommand("hreport").setExecutor(new HReport(this));
-        getCommand("sreport").setExecutor(new sreport(this));
-        getCommand("ireport").setExecutor(new ireportc());
-        getServer().getPluginManager().registerEvents(new Utils(), this);
-
+    @Subscribe
+    public void onEnable(PreInitializationEvent event) {
+        game.getCommandDispatcher().register(this, new Dreport(), "dreport");
+        game.getCommandDispatcher().register(this, new greport(), "greport");
+        game.getCommandDispatcher().register(this, new HReport(), "hreport");
+        game.getCommandDispatcher().register(this, new ireportc(), "ireport");
+        game.getCommandDispatcher().register(this, new Reports(), "reports");
+        game.getCommandDispatcher().register(this, new sreport(), "sreport");
+        event.getGame().getEventManager().register(this, Utils.INSTENCE);
         getMYSQL();
-        try (ObjectInputStream o = new ObjectInputStream(new FileInputStream(new File(getDataFolder(), "data.bin")))) {
-            Data.instens = (Data) o.readObject();
-        } catch (FileNotFoundException e) {
-        } catch (ClassCastException e) {
-            e.printStackTrace();
-            logger.log(Level.SEVERE, "Don't modyfy data.bin");
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    @Override
-    public void onDisable() {
-        if (sql.isenable && sql.hasConnection()) {
-            sql.closeConnection();
-        }
-        try (ObjectOutputStream o = new ObjectOutputStream(new FileOutputStream(new File(getDataFolder(), "data.bin")));) {
-            o.writeObject(Data.init());
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public FileConfiguration getReports() {
-        if (newConfig == null) {
-            newConfig = YamlConfiguration.loadConfiguration(reportsfile);
-
-            InputStream defConfigStream = getResource("reports.yml");
-            if (defConfigStream != null) {
-                @SuppressWarnings("deprecation")
-                YamlConfiguration defConfig = YamlConfiguration.loadConfiguration(defConfigStream);
-
-                newConfig.setDefaults(defConfig);
-            }
-        }
-        return newConfig;
-    }
-
-    public void saveReports() {
-        try {
-            getReports().save(reportsfile);
-        } catch (IOException ex) {
-            logger.log(Level.SEVERE, "Could not save config to " + reportsfile, ex);
-        }
-    }
-
-    @Override
-    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
-        Stream<String> stream = null;
-        if ((sender.hasPermission("iReport.dreport") && alias.equalsIgnoreCase("dreport")) || (sender.hasPermission("iReport.reports") 
-                && alias.equalsIgnoreCase("reports") && args[0].equalsIgnoreCase("uuid"))) {
-            stream = Data.init().playermapo.keySet().parallelStream().map(UUID::toString);
-        }
-        if (sender.hasPermission("iReport.dreport") && alias.equalsIgnoreCase("dreport")) {
-            return stream.filter(s -> s.startsWith(args[0])).collect(Collectors.toList());
-        }
-        if (sender.hasPermission("iReport.reports") && alias.equalsIgnoreCase("reports")) {
-            if (args.length < 2) {
-                List<String> l = new ArrayList<>();
-                if ("uuid".startsWith(args[0].toLowerCase())) {
-                    l.add("uuid");
+        if (sql.isenable) {
+            try {
+                loadSql();
+            } catch (SQLException e) {
+                try {
+                    loadFile();
+                } catch (IOException e1) {
+                    e1.addSuppressed(e);
+                    Utils.printStackTrace(e1);
                 }
-                if ("usernameo".startsWith(args[0].toLowerCase())) {
-                    l.add("usernameo");
-                }
-                if ("gui".startsWith(args[0].toLowerCase())) {
-                    l.add("gui");
-                }
-                return l;
             }
-            if (args[0].equalsIgnoreCase("uuid")) {
-                return stream.filter(s -> s.startsWith(args[1])).collect(Collectors.toList());
-            }
-            if (args[0].equalsIgnoreCase("usernameo")) {
-                return Data.init().playermapo.values().parallelStream().filter(s -> s.startsWith(args[1])).collect(Collectors.toList());
+        } else {
+            try {
+                loadFile();
+            } catch (Exception e) {
+                Utils.printStackTrace(e);
             }
         }
-        return null;
+    }
+
+    @Subscribe
+    public void onDisable(ServerStoppingEvent event) {
+        Data.init().playermapo.keySet().parallelStream().forEach(Utils::savePlayer);
+    }
+    
+    private void loadFile() throws IOException {
+        File file = new File(IReport.configfolder, "reports.cfg");
+        HoconConfigurationLoader cfgfile = HoconConfigurationLoader.builder().setFile(file).build();
+        ConfigurationNode config = cfgfile.load();
+        Data data = Data.init();
+        ConfigurationNode nodde = config.getNode("reports");
+        nodde.getChildrenMap().entrySet().parallelStream().forEach(node -> {
+            UUID uuid = UUID.fromString((String) node.getKey());
+            String currenttname = node.getValue().getNode("currenttname").getString();
+            String reportedename = node.getValue().getNode("reportedename").getString();
+            String reports = node.getValue().getNode("reports").getString();
+            data.playermap.put(uuid, currenttname);
+            data.playermapo.put(uuid, reportedename);
+            data.playermapr.put(uuid, reports);
+            data.playermapor.put(reportedename, uuid);
+        });
+    }
+
+    private void loadSql() throws SQLException {
+        ResultSet resultSet = sql.queryUpdate("select * from reports", false);
+        Data data = Data.init();
+        while (resultSet.next()) {
+            UUID uuid = UUID.fromString(resultSet.getString("uuid"));
+            String currenttname = resultSet.getString("currentname");
+            String reportedename = resultSet.getString("Report");
+            String reports = resultSet.getString("username");
+            data.playermap.put(uuid, currenttname);
+            data.playermapo.put(uuid, reportedename);
+            data.playermapr.put(uuid, reports);
+            data.playermapor.put(reportedename, uuid);
+        }
+        resultSet.close();
     }
 }

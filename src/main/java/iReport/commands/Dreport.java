@@ -1,45 +1,102 @@
 package iReport.commands;
 
-import java.util.UUID;
-
 import iReport.IReport;
 import iReport.util.Data;
+import ninja.leaping.configurate.ConfigurationNode;
+import ninja.leaping.configurate.hocon.HoconConfigurationLoader;
 
-import org.bukkit.ChatColor;
-import org.bukkit.command.Command;
-import org.bukkit.command.CommandExecutor;
-import org.bukkit.command.CommandSender;
+import java.io.File;
+import java.io.IOException;
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
-public class Dreport implements CommandExecutor {
+import org.spongepowered.api.text.Text;
+import org.spongepowered.api.text.Texts;
+import org.spongepowered.api.text.format.TextColors;
+import org.spongepowered.api.util.command.CommandCallable;
+import org.spongepowered.api.util.command.CommandException;
+import org.spongepowered.api.util.command.CommandResult;
+import org.spongepowered.api.util.command.CommandSource;
+
+import com.google.common.base.Optional;
+import com.google.common.collect.Lists;
+
+public final class Dreport implements CommandCallable {
+
+    private static  File file = new File(IReport.configfolder, "reports.cfg");
+    
+    @Override
+    public List<String> getSuggestions(CommandSource source, String arguments) throws CommandException {
+        if (!testPermission(source)) {
+            return Lists.newArrayList();
+        }
+        return Data.init().playermapo.keySet().parallelStream().map(UUID::toString).filter(s -> s.startsWith(arguments.split(" ")[0])).collect(Collectors.toList());
+    }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+    public Optional<CommandResult> process(CommandSource source, String arguments) throws CommandException {
+        if (!testPermission(source)) {
+            source.sendMessage(Texts.of(TextColors.RED, "You don't have permission to use this command"));
+            return Optional.<CommandResult>absent();
+        }
+        String[] args = arguments.split(" ");
         Data data = Data.init();
         if (args[0].equals("*")) {
-            if (sender.hasPermission("ireport.dreport.all")) {
-                data.playermapo.keySet().stream().forEach(uuid -> {
-                    IReport.getMYSQL().queryUpdate("DELETE FROM reports WHERE uuid = '" + uuid.toString() + "'");
-                });
+            if (source.hasPermission("ireport.dreport.all")) {
+                data.playermapo.keySet().parallelStream().map(UUID::toString).forEach(this::delete);
+                IReport.getMYSQL().queryUpdate("DELETE FROM reports");
                 data.playermapo.clear();
                 data.playermapor.clear();
                 data.playermapr.clear();
-                sender.sendMessage(ChatColor.GREEN + "Successfully cleared reports");
+                source.sendMessage(Texts.builder("Successfully cleared reports").color(TextColors.GREEN).build());
+                return Optional.of(CommandResult.success());
             } else {
-                sender.sendMessage(ChatColor.RED + "You don't have permission");
+                throw new CommandException(Texts.builder("You don't have permission").color(TextColors.RED).build());
             }
-            return true;
+
         }
         try {
-            String s = data.playermapo.get(UUID.fromString(args[0]));
-            data.playermapo.remove(UUID.fromString(args[0]));
-            data.playermapr.remove(UUID.fromString(args[0]));
+            UUID uuid = UUID.fromString(args[0]);
+            String s = data.playermapo.get(uuid);
+            data.playermapo.remove(uuid);
+            data.playermapr.remove(uuid);
             data.playermapor.remove(s);
+            delete(uuid.toString());
+            source.sendMessage(Texts.builder("Successfully deleted " + s).color(TextColors.GREEN).build());
             IReport.getMYSQL().queryUpdate("DELETE FROM reports WHERE uuid = '" + UUID.fromString(args[0]) + "'");
-            sender.sendMessage(ChatColor.GREEN + "Successfully deleted " + s);
         } catch (IllegalArgumentException e) {
-            sender.sendMessage(ChatColor.RED + "invalid UUID");
+            throw new CommandException(Texts.builder("invalid UUID").color(TextColors.RED).build());
         }
-        return true;
+        return Optional.of(CommandResult.success());
     }
 
+    @Override
+    public boolean testPermission(CommandSource source) {
+        return source.hasPermission("ireport.dreport");
+    }
+
+    @Override
+    public Optional<Text> getShortDescription(CommandSource source) {
+        return Optional.of((Text)Texts.of("Deletes a report"));
+    }
+
+    @Override
+    public Optional<Text> getHelp(CommandSource source) {
+        return Optional.of((Text)Texts.of("Deletes a report"));
+    }
+
+    @Override
+    public Text getUsage(CommandSource source) {
+        return Texts.of("<UUID>");
+    }
+    
+    public void delete(String uuid) {
+        HoconConfigurationLoader cfgfile = HoconConfigurationLoader.builder().setFile(file).build();
+        try {
+            ConfigurationNode config = cfgfile.load();
+            config.getNode("reports").removeChild(uuid);
+            cfgfile.save(config);
+        } catch (IOException e) {}
+    }
 }

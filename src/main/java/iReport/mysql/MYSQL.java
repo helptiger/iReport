@@ -1,101 +1,130 @@
 package iReport.mysql;
 
+import iReport.IReport;
+import iReport.util.Utils;
+
 import java.io.File;
-import java.io.IOException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.HashMap;
+import java.util.Map;
 
-import org.bukkit.configuration.file.FileConfiguration;
-import org.bukkit.configuration.file.YamlConfiguration;
+import javax.sql.DataSource;
 
-public class MYSQL {
+import org.spongepowered.api.service.sql.SqlService;
 
-    public boolean isenable;
-    private boolean debug;
-    private String host;
-    private int port;
-    private String user;
-    private String password;
-    private String database;
-    private Connection conn;
+import com.google.common.base.Optional;
+
+import ninja.leaping.configurate.ConfigurationNode;
+import ninja.leaping.configurate.hocon.HoconConfigurationLoader;
+
+public final class MYSQL {
+
+    public final boolean isenable;
+    private final String host;
+    private final int port;
+    private final String user;
+    private final String password;
+    private final String database;
+    private final String prodocol;
+    private DataSource ds;
 
     public MYSQL() throws Exception {
-        File file = new File("plugins/iReport/", "database.yml");
-        FileConfiguration cfg = YamlConfiguration.loadConfiguration(file);
-
-        String db = "database.";
-        cfg.addDefault(db + "enable", false);
-        cfg.addDefault(db + "host", "localhost");
-        cfg.addDefault(db + "port", 3306);
-        cfg.addDefault(db + "user", "user");
-        cfg.addDefault(db + "password", "password");
-        cfg.addDefault(db + "database", "database");
-        cfg.addDefault(db + "debug", false);
-        cfg.options().copyDefaults(true);
-        try {
-            cfg.save(file);
-        } catch (IOException e) {
-            e.printStackTrace();
+        if (!IReport.configfolder.exists()) {
+            IReport.configfolder.mkdirs();
         }
-        isenable = cfg.getBoolean(db + "enable");
-        this.host = cfg.getString(db + "host");
-        this.port = cfg.getInt(db + "port");
-        this.user = cfg.getString(db + "user");
-        this.password = cfg.getString(db + "passsword");
-        this.database = cfg.getString(db + "database");
-        this.debug = cfg.getBoolean(db + "debug");
-        if (isenable) {
-            this.oppenConnection();
+        File file = new File(IReport.configfolder, "database.cfg");
+
+        boolean furstrun = false;
+        String db = "database.";
+        if (!file.exists()) {
+            file.createNewFile();
+            furstrun = true;
+        }
+        HoconConfigurationLoader cfgfile = HoconConfigurationLoader.builder().setFile(file).build();
+        ConfigurationNode config = cfgfile.load();
+        ConfigurationNode node = config.getNode(db);
+        if (furstrun) {
+            Map<String, String> configDefaults = new HashMap<String, String>();
+            configDefaults.put("enable", String.valueOf(false));
+            configDefaults.put("host", "localhost");
+            configDefaults.put("port", String.valueOf(3306));
+            configDefaults.put("user", "user");
+            configDefaults.put("password", "password");
+            configDefaults.put("database", "database");
+            configDefaults.put("prodocol", "mysql");
+            node.setValue(configDefaults);
+            cfgfile.save(config);
+        }
+        isenable = node.getNode("enable").getBoolean();
+        this.host = node.getNode("host").getString();
+        this.port = node.getNode("port").getInt();
+        this.user = node.getNode("user").getString();
+        this.password = node.getNode("password").getString();
+        this.database = node.getNode("database").getString();
+        this.prodocol = node.getNode("prodocol").getString();
+        Optional<SqlService> provide = IReport.game.getServiceManager().provide(SqlService.class);
+        if (provide.isPresent()) {
+            try {
+                ds = provide.get().getDataSource("jdbc:" + this.prodocol + "://" + this.host + ":" + this.port + "/" + this.database);
+            } catch (Exception e) {
+                ds = null;
+            }
         }
     }
 
     public Connection oppenConnection() throws Exception {
-        Class.forName("com.mysql.jdbc.Driver");
-        conn = DriverManager.getConnection("jdbc:mysql://" + this.host + ":" + this.port + "/" + this.database, this.user, this.password);
-        return conn;
-    }
-
-    public Connection getConnection() {
-        return this.conn;
-    }
-
-    public boolean hasConnection() {
-        try {
-            return this.conn != null || this.conn.isValid(1);
-        } catch (SQLException e) {
-            if (debug) {
-                e.printStackTrace();
-            }
-            return false;
+        if (ds != null) {
+            return ds.getConnection(this.user, this.password);
+        } else {
+            return DriverManager.getConnection("jdbc:" + this.prodocol + "://" + this.host + ":" + this.port + "/" + this.database, this.user, this.password);
         }
     }
 
     public void queryUpdate(String query) {
-        if (!isenable) {
-            return;
-        }
-        try (PreparedStatement st = conn.prepareStatement(query)) {
-            st.executeUpdate();
-        } catch (SQLException e) {
-            if (debug) {
-                e.printStackTrace();
-            }
-            System.err.println("Failed to send update '" + query + "'.");
-        }
+        queryUpdate(query, true);
     }
 
-    public void closeConnection() {
+    public ResultSet queryUpdate(String query, boolean closeRespltset) {
+        if (!isenable) {
+            return null;
+        }
+        PreparedStatement st = null;
+        ResultSet rs = null;
         try {
-            this.conn.close();
-        } catch (SQLException e) {
-            if (debug) {
-                e.printStackTrace();
-            }
+            st = oppenConnection().prepareStatement(query);
+            rs = st.executeQuery();
+            return rs;
+        } catch (Exception e) {
+            Utils.printStackTrace(e);
+            IReport.LOGGER.error("Failed to send update '" + query + "'.");
         } finally {
-            this.conn = null;
+            if (!closeRespltset) {
+                this.closeRessources(null, st);
+            } else {
+                closeRessources(rs, st);
+            }
+        }
+        return null;
+    }
 
+    public void closeRessources(ResultSet rs, PreparedStatement st) {
+        if (rs != null) {
+            try {
+                rs.close();
+            } catch (SQLException e) {
+                Utils.printStackTrace(e);
+            }
+        }
+        if (st != null) {
+            try {
+                st.close();
+            } catch (SQLException e) {
+                Utils.printStackTrace(e);
+            }
         }
     }
 }
